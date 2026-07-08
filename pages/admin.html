@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel &bull; SSDK TOOLS HUB</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../assets/images/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/ssdk-style.css">
+  <script src="../assets/js/theme.js"></script>
+</head>
+<body>
+
+<div class="bg-fx"></div>
+<div id="progress"></div>
+
+<section class="page reveal-on-scroll">
+  <h1 class="page-title">Admin Panel</h1>
+  <p class="page-sub" id="adminSub">Checking access...</p>
+
+  <div class="content-card" id="denied" style="display:none;text-align:center">
+    <p>🔒 You don't have permission to view this page.</p>
+    <a href="login.html" class="btn" style="margin-top: 10px;">Go to Login</a>
+  </div>
+
+  <div id="adminContent" style="display:none">
+    <div class="admin-bar">
+      <span id="whoami"></span>
+      <button class="btn ghost" id="logoutBtn">Logout</button>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-num" id="toolCount">0</div><div>Tools</div></div>
+      <div class="stat-card"><div class="stat-num" id="msgCount">0</div><div>Messages</div></div>
+      <div class="stat-card"><div class="stat-num" id="revCount">0</div><div>Reviews</div></div>
+    </div>
+
+    <div class="auth-tabs" style="max-width:520px">
+      <button class="auth-tab active" data-pane="tools" type="button">Tools</button>
+      <button class="auth-tab" data-pane="messages" type="button">Messages</button>
+      <button class="auth-tab" data-pane="reviews" type="button">Reviews</button>
+    </div>
+
+    <div class="admin-pane" id="pane-tools">
+      <h3 style="margin-bottom:12px;">Add a New Tool</h3>
+      <div class="content-card" style="margin-bottom: 24px;">
+        <form class="contact-form" id="toolForm">
+          <input type="text" id="tName" placeholder="Tool name (e.g. QR Generator)" required>
+          <input type="text" id="tDesc" placeholder="Short description" required>
+          <input type="text" id="tIcon" placeholder="Emoji icon (e.g. 📱)">
+          <input type="text" id="tCat" placeholder="Category (e.g. Web Tools)" required>
+          <input type="text" id="tUrl" placeholder="Tool URL (e.g. tools/qr.html)" required>
+          <button type="submit" class="btn" id="tSubmit">Add Tool</button>
+          <p id="toolMsg" class="auth-msg"></p>
+        </form>
+      </div>
+
+      <h3 style="margin-bottom:12px;">Existing Tools</h3>
+      <div class="content-card" style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>Icon</th><th>Name</th><th>Category</th><th>URL</th><th></th></tr></thead>
+          <tbody id="toolBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-pane" id="pane-messages" style="display:none">
+      <div class="content-card" style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Subject</th><th>Message</th><th></th></tr></thead>
+          <tbody id="msgBody"><tr><td colspan="6">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-pane" id="pane-reviews" style="display:none">
+      <div class="content-card" style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>Date</th><th>User</th><th>Rating</th><th>Review</th><th></th></tr></thead>
+          <tbody id="revBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Dynamic Header and Footer Injections -->
+<script src="../assets/js/ssdk-header.js"></script>
+<script src="../assets/js/ssdk-footer.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot,
+  deleteDoc, doc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { firebaseConfig, ADMIN_EMAILS } from "../assets/js/firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const isAdmin = e => ADMIN_EMAILS.map(x=>x.toLowerCase()).includes((e||"").toLowerCase());
+
+$("logoutBtn").onclick = () => signOut(auth).then(()=>location.href="login.html");
+function esc(s){ return (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+document.querySelectorAll("[data-pane]").forEach(t => t.onclick = () => {
+  document.querySelectorAll("[data-pane]").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  document.querySelectorAll(".admin-pane").forEach(p => p.style.display = "none");
+  $("pane-" + t.dataset.pane).style.display = "block";
+});
+
+onAuthStateChanged(auth, user => {
+  if(!user){ location.href = "login.html"; return; }
+  if(!isAdmin(user.email)){
+    $("adminSub").textContent = "Access denied";
+    $("denied").style.display = "block";
+    return;
+  }
+  $("adminSub").textContent = "Manage tools, messages and reviews";
+  $("adminContent").style.display = "block";
+  $("whoami").textContent = "👑 " + user.email;
+  loadTools(); loadMessages(); loadReviews();
+});
+
+function toolMsg(t, ok=false){
+  const el = $("toolMsg"); el.textContent = t;
+  el.style.color = ok ? "var(--accent)" : "#ff6b6b"; el.style.display = t ? "block" : "none";
+}
+$("toolForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = $("tSubmit"); btn.disabled = true; btn.textContent = "Adding...";
+  try {
+    await addDoc(collection(db, "tools"), {
+      n: $("tName").value.trim(),
+      d: $("tDesc").value.trim(),
+      i: $("tIcon").value.trim() || "🔧",
+      cat: $("tCat").value.trim(),
+      u: $("tUrl").value.trim(),
+      createdAt: serverTimestamp()
+    });
+    e.target.reset();
+    toolMsg("✅ Tool added! It will now appear on the homepage.", true);
+  } catch(err){ toolMsg("❌ Could not add tool."); console.error(err); }
+  finally { btn.disabled = false; btn.textContent = "Add Tool"; }
+});
+function loadTools(){
+  const q = query(collection(db, "tools"), orderBy("createdAt", "desc"));
+  onSnapshot(q, snap => {
+    $("toolCount").textContent = snap.size;
+    if(snap.empty){ $("toolBody").innerHTML = '<tr><td colspan="5">No tools added yet.</td></tr>'; return; }
+    $("toolBody").innerHTML = snap.docs.map(d => {
+      const t = d.data();
+      let targetUrl = t.u || '#';
+      if (!targetUrl.startsWith('http') && !targetUrl.startsWith('..')) {
+        targetUrl = '../' + targetUrl;
+      }
+      return `<tr><td>${esc(t.i)}</td><td>${esc(t.n)}</td><td>${esc(t.cat)}</td>
+        <td><a href="${esc(targetUrl)}" target="_blank">${esc(t.u)}</a></td>
+        <td><button class="del-btn" data-c="tools" data-id="${d.id}">🗑</button></td></tr>`;
+    }).join("");
+    bindDelete();
+  });
+}
+
+function loadMessages(){
+  const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+  onSnapshot(q, snap => {
+    $("msgCount").textContent = snap.size;
+    if(snap.empty){ $("msgBody").innerHTML = '<tr><td colspan="6">No messages yet.</td></tr>'; return; }
+    $("msgBody").innerHTML = snap.docs.map(d => {
+      const m = d.data();
+      const dt = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "-";
+      return `<tr><td>${esc(dt)}</td><td>${esc(m.name)}</td>
+        <td><a href="mailto:${esc(m.email)}">${esc(m.email)}</a></td>
+        <td>${esc(m.subject)}</td><td>${esc(m.message)}</td>
+        <td><button class="del-btn" data-c="messages" data-id="${d.id}">🗑</button></td></tr>`;
+    }).join("");
+    bindDelete();
+  });
+}
+
+function loadReviews(){
+  const q = query(collection(db, "reviews"), orderBy("createdAt", "desc"));
+  onSnapshot(q, snap => {
+    $("revCount").textContent = snap.size;
+    if(snap.empty){ $("revBody").innerHTML = '<tr><td colspan="5">No reviews yet.</td></tr>'; return; }
+    $("revBody").innerHTML = snap.docs.map(d => {
+      const r = d.data();
+      const dt = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString() : "-";
+      const stars = "★".repeat(r.rating||0) + "☆".repeat(5-(r.rating||0));
+      return `<tr><td>${esc(dt)}</td><td>${esc(r.name)}</td><td>${stars}</td>
+        <td>${esc(r.text)}</td>
+        <td><button class="del-btn" data-c="reviews" data-id="${d.id}">🗑</button></td></tr>`;
+    }).join("");
+    bindDelete();
+  });
+}
+
+// Bind clicks to delete items
+function bindDelete(){
+  document.querySelectorAll(".del-btn").forEach(b => b.onclick = async () => {
+    if(confirm("Delete this item?")) await deleteDoc(doc(db, b.dataset.c, b.dataset.id));
+  });
+}
+</script>
+</body>
+</html>
