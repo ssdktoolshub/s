@@ -587,7 +587,7 @@ nav.scrolled {
 /* Search Wrapper */
 .search-wrap {
   position: relative;
-  z-index: 1000;
+  z-index: 99;
   margin: 15px auto;
   max-width: 650px;
   padding: 0 6%;
