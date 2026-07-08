@@ -321,6 +321,10 @@
       q.parentElement.classList.toggle('open');
     };
   });
+
+  window.addEventListener("ssdk-lang-change", (e) => {
+    if (typeof setLanguage === "function") setLanguage(e.detail);
+  });
 </script>
 </body>
 </html>
