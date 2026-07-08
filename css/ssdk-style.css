@@ -360,6 +360,7 @@ nav.scrolled {
   top: 170%;
   left: 50%;
   transform: translateX(-50%) translateY(10px);
+  z-index: 9999;
   background: rgba(22, 22, 28, 0.98);
   border: 1px solid var(--border);
   border-radius: 12px;
