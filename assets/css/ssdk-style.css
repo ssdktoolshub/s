@@ -299,6 +299,24 @@ nav.scrolled {
   text-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
 }
 
+[data-theme="light"] .logo img {
+  filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.4));
+}
+
+[data-theme="light"] .brand-ssdk {
+  text-shadow: 0 0 10px rgba(124, 58, 237, 0.15);
+}
+
+[data-theme="light"] .brand-th {
+  color: #1E1E2E;
+  text-shadow: none;
+}
+
+[data-theme="light"] .logo-tagline {
+  color: #6B7280;
+}
+
+
 @keyframes glowAnim {
   0% {
     text-shadow: 0 0 20px rgba(124, 58, 237, 0.25);
